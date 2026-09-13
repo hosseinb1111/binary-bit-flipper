@@ -43,11 +43,11 @@ Maximum representable value: **2047** (`11111111111`).
 ## Usage
 
 1. Clone or download the repo
-2. Open `binary_bit_flipper.html` in any modern browser
+2. Open `index.html` in any modern browser
 
 That's it.
 
 ```bash
-git clone https://github.com/your-username/binary-bit-flipper.git
+git clone https://github.com/hosseinb1111/binary-bit-flipper.git
 cd binary-bit-flipper
-open binary_bit_flipper.html   # or just double-click it
+openindex.html   # or just double-click it

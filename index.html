@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Bit Flipper</title>
+<style>
+  :root {
+    --surface-1: #f6f7f9;
+    --surface-2: #ffffff;
+    --border: rgba(15, 23, 42, .09);
+    --border-accent: rgba(37, 99, 235, .45);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --text-accent: #2563eb;
+    --bg-accent: #dbeafe;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(219, 234, 254, .8), transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(237, 233, 254, .8), transparent 45%),
+      linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  }
+
+  /* --- screen-reader only --- */
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---------- shell ---------- */
+  .bbf {
+    width: 100%;
+    max-width: 680px;
+    margin: 1.5rem;
+    padding: 1.5rem 1.25rem 1.25rem;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(37, 99, 235, .08), transparent 40%),
+      radial-gradient(circle at 95% 100%, rgba(139, 92, 246, .08), transparent 40%),
+      linear-gradient(160deg, #ffffff 0%, #f8fafc 60%, #eef2ff 100%);
+    border: 1px solid var(--border);
+    box-shadow:
+      0 24px 48px -24px rgba(15, 23, 42, .25),
+      0 1px 2px rgba(15, 23, 42, .06);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+  .bbf *,
+  .bbf *::before,
+  .bbf *::after { box-sizing: border-box; }
+
+  /* ---------- bits ---------- */
+  .bbf-bits {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+
+  .bbf-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bbf-power {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    transition: color .2s ease, transform .2s ease;
+  }
+  .bbf-col.is-on .bbf-power {
+    color: var(--text-accent);
+    transform: scale(1.06);
+  }
+
+  .bbf-bit {
+    width: 46px;
+    height: 54px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .06);
+    transition:
+      transform .16s cubic-bezier(.2, .8, .3, 1),
+      background-color .2s ease,
+      color .2s ease,
+      border-color .2s ease,
+      box-shadow .2s ease;
+  }
+
+  .bbf-bit:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-accent);
+    color: var(--text-accent);
+    box-shadow: 0 8px 18px -10px rgba(15, 23, 42, .55);
+  }
+  .bbf-bit:active { transform: translateY(-1px) scale(.95); }
+  .bbf-bit:focus-visible {
+    outline: 2px solid var(--text-accent);
+    outline-offset: 2px;
+  }
+
+  .bbf-bit.is-on {
+    background: var(--bg-accent);
+    color: var(--text-accent);
+    border-color: var(--border-accent);
+    box-shadow:
+      0 6px 16px -8px rgba(37, 99, 235, .85),
+      inset 0 1px 0 rgba(255, 255, 255, .55);
+  }
+  .bbf-bit.is-on:hover { box-shadow: 0 10px 22px -10px rgba(37, 99, 235, .95); }
+
+  /* ---------- readout ---------- */
+  .bbf-readout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: .85rem 1rem .8rem;
+    margin-bottom: 1rem;
+    border-radius: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .bbf-readout-top {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .bbf-label {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .bbf-decimal {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+  }
+
+  .bbf-binary {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    letter-spacing: .3em;
+    padding-left: .3em;
+    color: var(--text-muted);
+  }
+
+  @keyframes bbf-pop {
+    0%   { transform: scale(.85); opacity: .45; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  .bbf-decimal.bbf-pop { animation: bbf-pop .18s ease-out; }
+
+  /* ---------- buttons ---------- */
+  .bbf-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .bbf-btn {
+    font: inherit;
+    font-size: 14px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    transition:
+      transform .15s cubic-bezier(.2, .8, .3, 1),
+      background-color .2s ease,
+      color .2s ease,
+      border-color .2s ease,
+      box-shadow .2s ease;
+  }
+  .bbf-btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-accent);
+    color: var(--text-accent);
+    box-shadow: 0 6px 14px -10px rgba(15, 23, 42, .6);
+  }
+  .bbf-btn:active { transform: translateY(0) scale(.97); }
+  .bbf-btn:focus-visible {
+    outline: 2px solid var(--text-accent);
+    outline-offset: 2px;
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 420px) {
+    .bbf { padding: 1.15rem .8rem 1rem; border-radius: 14px; }
+    .bbf-bits { gap: 4px; }
+    .bbf-bit { width: 38px; height: 46px; font-size: 17px; border-radius: 10px; }
+    .bbf-power { font-size: 10px; }
+    .bbf-decimal { font-size: 32px; }
+    .bbf-btn { padding: 8px 13px; font-size: 13px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bbf *, .bbf *::before, .bbf *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="bbf">
+  <h2 class="sr-only">Interactive 11-bit binary to decimal converter. Click any bit to toggle it and see the decimal value update.</h2>
+
+  <div class="bbf-bits" id="bits-row" role="group" aria-label="11-bit binary input"></div>
+
+  <div class="bbf-readout">
+    <div class="bbf-readout-top">
+      <span class="bbf-label">decimal value</span>
+      <span class="bbf-decimal" id="decimal-out" aria-live="polite" aria-atomic="true">0</span>
+    </div>
+    <div class="bbf-binary" id="binary-out" aria-hidden="true">00000000000</div>
+  </div>
+
+  <div class="bbf-controls">
+    <button class="bbf-btn" id="rand-btn" type="button">random</button>
+    <button class="bbf-btn" id="clear-btn" type="button">clear</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const bits = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const powers = [1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1];
+
+  const row = document.getElementById('bits-row');
+  const decOut = document.getElementById('decimal-out');
+  const binOut = document.getElementById('binary-out');
+
+  const cells = [];
+
+  const value = () => bits.reduce((sum, b, i) => sum + b * powers[i], 0);
+
+  function build() {
+    bits.forEach((_, i) => {
+      const col = document.createElement('div');
+      col.className = 'bbf-col';
+
+      const label = document.createElement('span');
+      label.className = 'bbf-power';
+      label.textContent = powers[i];
+
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'bbf-bit';
+      cell.textContent = '0';
+      cell.dataset.index = String(i);
+
+      cell.addEventListener('click', () => {
+        bits[i] = bits[i] ? 0 : 1;
+        update(true);
+      });
+
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const next = i + (e.key === 'ArrowRight' ? 1 : -1);
+          const target = cells[next] && cells[next].cell;
+          if (target) target.focus();
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          bits[i] = bits[i] ? 0 : 1;
+          update(true);
+        }
+      });
+
+      col.append(label, cell);
+      row.appendChild(col);
+      cells.push({ col, label, cell });
+    });
+  }
+
+  function update(animate) {
+    let changed = false;
+
+    cells.forEach(({ col, cell }, i) => {
+      const on = bits[i] === 1;
+      if (cell.textContent !== String(bits[i])) changed = true;
+
+      cell.textContent = String(bits[i]);
+      cell.classList.toggle('is-on', on);
+      col.classList.toggle('is-on', on);
+      cell.setAttribute('aria-pressed', on ? 'true' : 'false');
+      cell.setAttribute('aria-label', 'bit for ' + powers[i] + ', currently ' + bits[i]);
+    });
+
+    decOut.textContent = value();
+    binOut.textContent = bits.join('');
+
+    if (animate && changed) {
+      decOut.classList.remove('bbf-pop');
+      void decOut.offsetWidth;
+      decOut.classList.add('bbf-pop');
+    }
+  }
+
+  document.getElementById('rand-btn').onclick = () => {
+    for (let i = 0; i < bits.length; i++) bits[i] = Math.random() < 0.5 ? 0 : 1;
+    update(true);
+  };
+
+  document.getElementById('clear-btn').onclick = () => {
+    for (let i = 0; i < bits.length; i++) bits[i] = 0;
+    update(true);
+  };
+
+  build();
+  update(false);
+})();
+</script>
+</body>
+</html>
